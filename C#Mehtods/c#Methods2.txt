@@ -1,0 +1,485 @@
+
+    class WebHelper
+    {
+        public static string getLog(string Url)
+        {
+            string logStr = "";
+            WebClient MyWebClient = new WebClient();
+
+
+            MyWebClient.Credentials = CredentialCache.DefaultCredentials;//获取或设置用于向Internet资源的请求进行身份验证的网络凭据
+
+            Byte[] pageData = MyWebClient.DownloadData(Url); //从指定网站下载数据
+
+            string pageHtml = Encoding.Default.GetString(pageData);  //如果获取网站页面采用的是GB2312，则使用这句            
+
+            //string pageHtml = Encoding.UTF8.GetString(pageData); //如果获取网站页面采用的是UTF-8，则使用这句
+
+            //Console.WriteLine(pageHtml);//在控制台输入获取的内容
+            return logStr;
+        }
+    }
+
+    [VersionController("Suhx", "2016-11-3", "增加异步访问HTTP")]
+    public class HTTPHelper
+    {
+        public async static Task<string> PostRequest(string _Url,string _JsonData)
+        {
+            string stringResponse = string.Empty;
+            try
+            {
+                HttpWebRequest request = WebRequest.CreateHttp(_Url);
+                Encoding encoding = Encoding.UTF8;
+                byte[] bytesToPost = encoding.GetBytes(_JsonData.ToString());
+                request.ContentType = "application/json";
+                request.ContentLength = bytesToPost.Length;
+                request.Method = "POST";
+                using (Stream requestStream = await request.GetRequestStreamAsync())
+                {
+                    await requestStream.WriteAsync(bytesToPost, 0, bytesToPost.Length);
+                }
+                WebResponse response = await request.GetResponseAsync();
+
+                Stream responseStream = response.GetResponseStream();
+               
+                using (StreamReader responseReader = new StreamReader(responseStream, Encoding.UTF8))
+                {
+                    stringResponse = await responseReader.ReadToEndAsync();
+                }
+                
+            }
+            catch (Exception ex)
+            {
+
+                stringResponse = ex.Message + ex.StackTrace;
+            }
+
+            return stringResponse;
+
+        }
+    }
+
+
+    [VersionController("Suhx", "2016-11-1", "整理")]
+    public class DBHelper
+    {
+        //Connect String
+        public static string connectStr = "";
+
+        //建立数据库连接
+        private SqlConnection OpenSqlConn(string ConnectString)
+        {
+
+            SqlConnection myConn = null;
+
+            try
+            {
+
+                myConn = new SqlConnection(ConnectString);
+                myConn.Open();
+            }
+            catch (Exception e)
+            {
+
+                throw e;
+            }
+            return myConn;
+
+        }
+
+        //关闭连接
+        private void CloseSqlConn(SqlConnection conn)
+        {
+            conn.Close();
+        } 
+
+    }
+
+    [VersionController("Suhx", "2016-11-1", "整理")]
+    public class JsonHelper
+    {
+        public static StringBuilder sb_JsonStr = new StringBuilder();
+
+        public static JsonHelper myJson = new JsonHelper();
+
+        public JsonHelper AppendJsonHead(string HeadKey, string HeadValue)
+        {
+            sb_JsonStr.Append("{")
+                .Append("\"")
+                .Append(HeadKey)
+                .Append("\"")
+                .Append(":")
+                .Append("\"")
+                .Append(HeadValue)
+                .Append("\"");
+
+            return myJson;
+        }
+        public JsonHelper AppendJsonBody(string BodyKey, string BodyValue)
+        {
+            sb_JsonStr.Append(",")
+                .Append("\"")
+                .Append(BodyKey)
+                .Append("\"")
+                .Append(":")
+                .Append("\"")
+                .Append(BodyValue)
+                .Append("\"");
+
+
+            return myJson;
+        }
+        public string AppendJsonFoot(string FootKey, string FootValue)
+        {
+
+            sb_JsonStr.Append(",")
+                .Append("\"")
+                .Append(FootKey)
+                .Append("\"")
+                .Append(":")
+                .Append("\"")
+                .Append(FootValue)
+                .Append("\"")
+                .Append("}");
+
+            return sb_JsonStr.ToString();
+        }
+    }
+
+    [VersionController("Suhx", "2016-11-1", "整理")]
+    public class NewtownSoftHelper
+    {
+        public static string SeriliazeFromObjToStr<T>(T obj)
+        {
+
+            return JsonConvert.SerializeObject(obj);
+        }
+
+        public static T DeseriliazeFromStrToObj<T>(string jsonStr)
+        {
+            return JsonConvert.DeserializeObject<T>(jsonStr);
+        }
+    }
+
+    [VersionController("Suhx", "2016-11-1", "整理")]
+    public class ConverterHelper
+    {
+        #region 16进制转换成byte数组
+        public static byte[] ConvertHexToByteArray(string source)
+        {
+            //判断null
+            source = source ?? "";
+            byte[] btarr = new byte[source.Length / 2];
+            for (int i = 0; i < btarr.Length; i++)
+            {
+                btarr[i] = Convert.ToByte(source.Substring(i * 2, 2), 16);
+            }
+            return btarr;
+        }
+        #endregion
+
+        #region byte[]数组转换成16进制字符串
+        public static string ConvertByteArrayToHexStr(byte[] myByte)
+        {
+            //判断null
+            myByte = myByte ?? new byte[] { };
+            StringBuilder sb = new StringBuilder(myByte.Length * 2);
+
+            foreach (var item in myByte)
+            {
+                sb.Append(item.ToString("X2"));
+            }
+
+            return sb.ToString().Trim();
+
+        }
+        #endregion
+    }
+
+    [VersionController("Suhx","2016-11-1","add","仅供参考，类库中无法实现")]
+    public class ConfigHelper
+    {
+        public static string GetConfigValue(string _Key)
+        {
+            string Value = "";
+            try
+            {
+               // Value = ConfigurationManager.AppSettings[key];
+            }
+            catch (Exception ex)
+            {
+
+                throw ex;
+            }
+            return Value;
+        }
+    }
+
+    [VersionController("Suhx", "2016-11-1", "整理")]
+    public class IPHelper
+    {
+        /// <summary>
+        ///可以透过代理取客户端IP
+        /// 优先顺序
+        /// ServerVariables["HTTP_X_FORWARDED_FOR"]
+        /// Headers.GetValues("X-Forwarded-For")
+        /// Request.UserHostAddress
+        /// </summary>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public static string GetClientIPAddress(HttpContext context)
+        {
+            string SVIP = context.Request.ServerVariables["HTTP_X_FORWARDED_FOR"];
+
+            string IP = string.Empty;
+
+            try
+            {
+                if (string.IsNullOrEmpty(SVIP) || string.IsNullOrWhiteSpace(SVIP))
+                {
+                    string[] arr = context.Request.Headers.GetValues("X-Forwarded-For");
+
+                    if (arr == null || arr.Length < 1)
+                    {
+                        IP = context.Request.UserHostAddress;
+                    }
+                    else
+                    {
+                        IP = arr[0];
+                    }
+                }
+                else
+                {
+                    IP = SVIP.ToString().Split(',')[0].ToString().Trim();
+                }
+            }
+            catch
+            {
+                ;
+            }
+            finally
+            {
+                if (string.IsNullOrEmpty(IP) || string.IsNullOrWhiteSpace(IP))
+                {
+                    IP = context.Request.UserHostAddress;
+                }
+            }
+
+            return IP;
+        }
+    }
+
+    [VersionController("Suhx", "2016-11-1", "整理")]
+    public class PostHelper
+    {
+        #region 请求服务器
+        public static string getPostMethod(String Url, String Params)
+        {
+            String stringReturn = "";
+            //post请求
+            HttpWebRequest httpRequest = (HttpWebRequest)WebRequest.Create(Url);
+            Encoding encoding = Encoding.UTF8;
+            byte[] bytesToPost = encoding.GetBytes(Params.ToString());
+            httpRequest.ContentType = "application/json";
+            httpRequest.ContentLength = bytesToPost.Length;
+            httpRequest.Method = "POST";
+            Stream requestStream = httpRequest.GetRequestStream();
+            requestStream.Write(bytesToPost, 0, bytesToPost.Length);
+            requestStream.Close();
+            //post读取
+            Stream responseStream = httpRequest.GetResponse().GetResponseStream();
+            string stringResponse = string.Empty;
+            using (StreamReader responseReader = new StreamReader(responseStream, Encoding.UTF8))
+            {
+                stringResponse = responseReader.ReadToEnd();
+            }
+            responseStream.Close();
+            stringReturn = stringResponse;
+
+            return stringReturn;
+        }
+        #endregion
+    }
+
+    [VersionController("Suhx", "2016-11-1", "整理")]
+    public class CryptographyHelper
+    {
+        #region 加解密方法
+        //向量
+        public static byte[] iv1 = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+
+        //3des加密
+        public static string TripleDESToBase64(string toEncryptArr, string appKey)
+        {
+            TripleDESHelper tripledesHelper = new TripleDESHelper();
+            tripledesHelper.CipherMode = CipherMode.CBC;
+
+            tripledesHelper.PaddingMode = PaddingMode.PKCS7;
+
+            byte[] iv = iv1;
+            tripledesHelper.IV = iv;
+
+            tripledesHelper.Key = ConverterHelper.ConvertHexToByteArray(appKey);
+
+            byte[] Encrypted = tripledesHelper.TripleDESEncrypt(TripleDESHelper.ConvertStringToByteArray(toEncryptArr));
+
+            string StrEncrypted = TripleDESHelper.ToBase64String(Encrypted);
+
+            return StrEncrypted;
+
+        }
+
+        //3des签名
+        public static string GetAuthCTPassTokenSignatureV2(byte[] toEncryptArrByte, byte[] appKey)
+        {
+            TripleDESHelper tripledesHelper = new TripleDESHelper();
+            tripledesHelper.CipherMode = CipherMode.CBC;
+
+            tripledesHelper.PaddingMode = PaddingMode.PKCS7;
+            byte[] iv = iv1;
+            tripledesHelper.IV = iv;
+
+            tripledesHelper.Key = appKey;
+
+            byte[] Encrypted = tripledesHelper.TripleDESHashEncrypt(toEncryptArrByte);
+
+            string StrEncrypted = TripleDESHelper.ToBase64String(Encrypted);
+
+
+
+            return StrEncrypted;
+
+        }
+
+
+        //从base64解密
+        public static string FromBase64DeTripleDES(string Encrypted, string appKey)
+        {
+            TripleDESHelper tripledesHelper = new TripleDESHelper();
+            tripledesHelper.CipherMode = CipherMode.CBC;
+            tripledesHelper.PaddingMode = PaddingMode.PKCS7;
+
+            byte[] iv = iv1;
+            tripledesHelper.IV = iv;
+
+            tripledesHelper.Key = ConverterHelper.ConvertHexToByteArray(appKey);
+
+            byte[] StrEncrypted = TripleDESHelper.FromBase64String(Encrypted);
+
+            string Decrpyted = Encoding.UTF8.GetString(tripledesHelper.TripleDESDecrypt(StrEncrypted));
+
+
+            return Decrpyted;
+
+        }
+        #endregion
+
+        public static string ComputeHashString(string s)
+        {
+            return ToBase64String(ComputeHash(ConvertStringToByteArray(s)));
+        }
+
+        public static byte[] ComputeHash(byte[] buf)
+        {
+            return ((HashAlgorithm)CryptoConfig.CreateFromName("SHA1")).ComputeHash(buf);
+        }
+
+        public static string ToBase64String(byte[] buf)
+        {
+            return System.Convert.ToBase64String(buf);
+        }
+
+        public static byte[] FromBase64String(string s)
+        {
+            return System.Convert.FromBase64String(s);
+        }
+
+        public static byte[] ConvertStringToByteArray(String s)
+        {
+            return System.Text.Encoding.GetEncoding("utf-8").GetBytes(s);
+        }
+
+        public static string ConvertByteArrayToString(byte[] buf)
+        {
+            return System.Text.Encoding.GetEncoding("utf-8").GetString(buf);
+        }
+
+        public static string ConvertByteArrayToString2(byte[] buf)
+        {
+            string str = "";
+
+            for (int i = 0; i < buf.Length; i++)
+            {
+                str = str + ((int)buf[i]).ToString();
+            }
+            return str;
+        }
+
+        public static string ByteArrayToHexString(byte[] buf)
+        {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < buf.Length; i++)
+            {
+                sb.Append(buf[i].ToString("X").Length == 2 ? buf[i].ToString("X") : "0" + buf[i].ToString("X"));
+            }
+            return sb.ToString();
+        }
+
+        public static byte[] HexStringToByteArray(string s)
+        {
+            Byte[] buf = new byte[s.Length / 2];
+            for (int i = 0; i < buf.Length; i++)
+            {
+                buf[i] = (byte)(chr2hex(s.Substring(i * 2, 1)) * 0x10 + chr2hex(s.Substring(i * 2 + 1, 1)));
+            }
+            return buf;
+        }
+
+        //字符串转换成16进制
+        private static byte chr2hex(string chr)
+        {
+            switch (chr)
+            {
+                case "0":
+                    return 0x00;
+                case "1":
+                    return 0x01;
+                case "2":
+                    return 0x02;
+                case "3":
+                    return 0x03;
+                case "4":
+                    return 0x04;
+                case "5":
+                    return 0x05;
+                case "6":
+                    return 0x06;
+                case "7":
+                    return 0x07;
+                case "8":
+                    return 0x08;
+                case "9":
+                    return 0x09;
+                case "A":
+                    return 0x0a;
+                case "B":
+                    return 0x0b;
+                case "C":
+                    return 0x0c;
+                case "D":
+                    return 0x0d;
+                case "E":
+                    return 0x0e;
+                case "F":
+                    return 0x0f;
+            }
+            return 0x00;
+        }
+    }
+    #endregion
+
+
+    
+
+
+

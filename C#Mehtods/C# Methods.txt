@@ -1,0 +1,205 @@
+
+class BlackTecnology
+{
+}
+[VersionController("Suhx", "2016-11-1", "ADD")]
+public class VerifyParamsBlackTecnology
+{
+    [VersionController("Suhx", "2016-11-1", "Modify")]
+    [VersionController("Suhx", "2016-10-20", "modify", "Support string parameters")]
+    public static VerifyParamsResult VerifyNullMethod<T>(T VerifyObj, params string[] AllowNullParams)
+    {
+        VerifyParamsResult resVal = new VerifyParamsResult();
+        Type obj = typeof(T);
+        PropertyInfo[] propertyInfo = obj.GetProperties();
+        //*_*traverse properties
+        foreach (var item in propertyInfo)
+        {
+            string myPorp;
+            Object myPorpKey;
+
+            if (item.GetValue(VerifyObj, null) == null)
+            {
+                myPorpKey = item.GetValue(VerifyObj, null) as string;
+                myPorp = myPorpKey as string;
+            }
+            else
+            {
+                myPorpKey = item.GetValue(VerifyObj, null);
+                myPorp = myPorpKey.ToString();
+            }
+
+            if (AllowNullParams.Any(param => item.Name == param) == true)
+            {
+                //nothing to do
+            }
+            else
+            {
+                //check null
+                if (String.IsNullOrEmpty(myPorp))
+                {
+                    resVal.ResultCode = 160;
+                    resVal.ResultDesc = item.Name + "is null";
+                    return resVal;
+                }
+            }
+        }
+        resVal.ResultCode = 10;
+        resVal.ResultDesc = "";
+        return resVal;
+    }
+
+}
+
+/// <summary>
+/// Write file
+/// </summary>
+public class AsynFileHelp
+{
+    private static Dictionary<long, long> lockDic = new Dictionary<long, long>();
+    private string fileName;
+    /// <summary>  
+    /// get/set File Name 
+    /// </summary>  
+    public string FileName
+    {
+        get { return fileName; }
+        set { fileName = value; }
+    }
+    /// <summary>  
+    /// Constructor  
+    /// </summary>  
+    /// <param name="byteCount"></param>  
+    /// <param name="fileName">abusolute path</param>  
+    public AsynFileHelp(string filename)
+    {
+        this.fileName = filename;
+    }
+    /// <summary>  
+    /// Create file  
+    /// </summary>  
+    /// <param name="fileName"></param>  
+    public void Create(string fileName)
+    {
+        if (!File.Exists(fileName))
+        {
+            using (FileStream fs = File.Create(fileName))
+            {
+                fs.Close();
+            }
+        }
+    }
+    /// <summary>  
+    /// write file  
+    /// </summary>  
+    /// <param name="content"></param>  
+    private void Write(string content, string newLine)
+    {
+        if (string.IsNullOrEmpty(fileName))
+        {
+            throw new Exception("文件名不能为空！");
+        }
+        using (FileStream fs = new FileStream(fileName, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite, 8, FileOptions.Asynchronous))
+        {
+            Byte[] dataArray = System.Text.Encoding.Default.GetBytes(content + newLine);
+            bool flag = true;
+            long slen = dataArray.Length;
+            long len = 0;
+            while (flag)
+            {
+                try
+                {
+                    if (len >= fs.Length)
+                    {
+                        fs.Lock(len, slen);
+                        lockDic[len] = slen;
+                        flag = false;
+                    }
+                    else
+                    {
+                        len = fs.Length;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    while (!lockDic.ContainsKey(len))
+                    {
+                        len += lockDic[len];
+                    }
+                }
+            }
+            fs.Seek(len, SeekOrigin.Begin);
+            fs.Write(dataArray, 0, dataArray.Length);
+            fs.Close();
+        }
+    }
+    /// <summary>  
+    /// write content  
+    /// </summary>  
+    /// <param name="content"></param>  
+    public void WriteLine(string content)
+    {
+        this.Write(content, System.Environment.NewLine);
+    }
+    /// <summary>  
+    /// write content 
+    /// </summary>  
+    /// <param name="content"></param>  
+    public void Write(string content)
+    {
+        this.Write(content, "");
+    }
+}
+
+public class LogUtil
+{
+    private static LogUtil logUtil = null;
+
+    private LogUtil()
+    { 
+    }
+
+    public static LogUtil instance
+    {
+        get
+        {
+            if (logUtil == null)
+            {
+                logUtil = new LogUtil();
+            }
+            return logUtil;
+
+        }
+
+    }
+    private static Dictionary<string, object> proptys = new Dictionary<string, object>();
+
+    public LogUtil AddLogKeyValue(string Key, object Value)
+    {
+        proptys.Add(Key, Value);
+
+        return logUtil;
+    }
+
+    public object Exe()
+    {
+        if (proptys.Count > 0)
+        {
+            dynamic obj = new System.Dynamic.ExpandoObject();
+            foreach (KeyValuePair<string,object> item in proptys)
+            {
+                ((IDictionary<string, object>)obj).Add(item.Key, item.Value);
+            }
+            proptys = new Dictionary<string, object>();
+
+            return obj;
+        }
+        else
+        {
+            return null;
+        }
+
+       
+    }
+
+}
